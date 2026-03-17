@@ -1,14 +1,23 @@
 package com.praful.stockstream.service;
 
 import com.praful.stockstream.model.Stock;
+import com.praful.stockstream.model.StockEntity;
+import com.praful.stockstream.repository.StockRepository;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
 public class StockService {
+
+    private final StockRepository stockRepository;
+
     private Map<String, Stock> stockData = new HashMap<>();
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     Random random = new Random();
 
@@ -22,12 +31,22 @@ public class StockService {
             if (newPrice < 0) {
                 newPrice = 1;
             }
-           String.format(stock.setPrice(newPrice)) ;
+            stock.setPrice(newPrice);
+
+            //Save to DB
+            StockEntity entity = new StockEntity(stock.getSymbol(),stock.getPrice(), LocalDateTime.now());
+
+            stockRepository.save(entity);
+
+            // Send Update to client
+            messagingTemplate.convertAndSend("/topic/prices", stock);
         }
-        System.out.println("Price Updated: " + stockData);
+        System.out.println("Prices updated and pushed via WebSocket");
     }
 
-    public StockService() {
+    public StockService(StockRepository stockRepository, SimpMessagingTemplate messagingTemplate) {
+        this.stockRepository = stockRepository;
+        this.messagingTemplate = messagingTemplate;
         stockData.put("NIFTY", new Stock("NIFTY", 22150.0));
         stockData.put("BANKNIFTY", new Stock("BANKNIFTY", 47800.0));
         stockData.put("RELIANCE", new Stock("RELIANCE", 2950.0));
