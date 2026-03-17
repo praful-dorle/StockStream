@@ -1,0 +1,1 @@
+Step 1: Implemented REST APIs for stock price retrieval using Spring Boot.
